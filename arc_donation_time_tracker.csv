@@ -1,0 +1,9 @@
+Donation.type,Machine.name,Start.time,Finish.time
+Platelet,Platelet1,10:00,12:00:00
+Platelet,Platelet2,01:15,03:15:00
+WB,WB1,03:15,03:45:00
+WB,WB2,01:00,01:30:00
+WB,WB3,10:30,11:00:00
+PR,PR1,01:30,02:30:00
+PR,PR2,03:00,04:00:00
+PR,PR3,03:00,04:00:00
