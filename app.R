@@ -1,4 +1,4 @@
-packages.list <- c("shiny", "shinyTime", "tidyverse", "DT", "mgrittr", "reactable")
+packages.list <- c("shiny", "shinyTime", "tidyverse", "DT", "magrittr", "reactable")
 packages.to.install <- packages.list[!(packages.list %in% installed.packages()[,"Package"])]
 if(length(packages.to.install)) install.packages(packages.to.install)
 
@@ -17,10 +17,11 @@ source("staff_input.R")
 
 ui <- fluidPage(
 
-titlePanel("Red Cross staff donation information input"),
+img(src="arc_logo.png", height=65, width=200),
+titlePanel("Blood donation wait time"),
 
 # Sidebar with a slider input for number of bins 
-sidebarLayout(position="left",
+sidebarLayout(position="right",
               fluidRow(
                        column(width=12, radioButtons("machine_name", "Choose a machine",
                              choices=c("Whole blood 1"="WB1",
@@ -57,7 +58,7 @@ server <- function(input, output) {
                     #%>% mutate(Finish.time=case_when(donation_wait_time$Donation.type=="WB" ~ substr(strptime(donation_wait_time$Start.time, format="%H:%M")+1800,12,20), TRUE ~ Finish.time))
                     #%>% mutate(Finish.time=case_when(donation_wait_time$Donation.type=="PR" ~ substr(strptime(donation_wait_time$Start.time, format="%H:%M")+3600,12,20), TRUE ~ Finish.time)))
                     donation_wait_time <<- dwt()
-                    write.csv(donation_wait_time,file="../arc_donation_time_tracker.csv",quote=FALSE,row.names=FALSE)})
+                    write.csv(donation_wait_time,file="./arc_donation_time_tracker.csv",quote=FALSE,row.names=FALSE)})
   observeEvent(input$submit,
                {dwt(dwt() %>% 
                     mutate(Finish.time=case_when(donation_wait_time$Donation.type=="Platelet" ~ substr(strptime(donation_wait_time$Start.time, format="%H:%M")+7200,12,20), TRUE ~ Finish.time))
