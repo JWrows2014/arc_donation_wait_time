@@ -48,14 +48,14 @@ server <- function(input, output) {
   dwt <- reactiveVal(donation_wait_time)
   observeEvent(input$submit,
                {dwt(dwt() %>% 
-                    mutate(Start.time=case_when(donation_wait_time$Machine.name==input$machine_name ~ strftime(input$start_time, "%H:%M"), TRUE ~ Start.time)))
+                    mutate(Start.time=case_when(donation_wait_time$Machine.name==input$machine_name ~ strftime(input$start_time, "%r"), TRUE ~ Start.time)))
                     donation_wait_time <<- dwt()
                     write.csv(donation_wait_time,file="./arc_donation_time_tracker.csv",quote=FALSE,row.names=FALSE)})
   observeEvent(input$submit,
                {dwt(dwt() %>% 
-                    mutate(Finish.time=case_when(donation_wait_time$Donation.type=="Platelet" ~ substr(strptime(donation_wait_time$Start.time, format="%H:%M")+7200,12,20), TRUE ~ Finish.time))
-                    %>% mutate(Finish.time=case_when(donation_wait_time$Donation.type=="WB" ~ substr(strptime(donation_wait_time$Start.time, format="%H:%M")+1800,12,20), TRUE ~ Finish.time))
-                    %>% mutate(Finish.time=case_when(donation_wait_time$Donation.type=="PR" ~ substr(strptime(donation_wait_time$Start.time, format="%H:%M")+3600,12,20), TRUE ~ Finish.time)))
+                    mutate(Finish.time=case_when(donation_wait_time$Donation.type=="Platelet" ~ strftime(strptime(donation_wait_time$Start.time, format="%r")+7200, format="%r"), TRUE ~ Finish.time))
+                    %>% mutate(Finish.time=case_when(donation_wait_time$Donation.type=="WB" ~ strftime(strptime(donation_wait_time$Start.time, format="%r")+1800, format="%r"), TRUE ~ Finish.time))
+                    %>% mutate(Finish.time=case_when(donation_wait_time$Donation.type=="PR" ~ strftime(strptime(donation_wait_time$Start.time, format="%r")+3600, format="%r"), TRUE ~ Finish.time)))
                    donation_wait_time <<- dwt()
                    write.csv(donation_wait_time,file="./arc_donation_time_tracker.csv",quote=FALSE,row.names=FALSE)}) 
   observeEvent(input$reset,
