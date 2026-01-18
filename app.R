@@ -4,12 +4,20 @@ if(length(packages.to.install)) install.packages(packages.to.install)
 
 library(shiny)
 library(shinyTime)
+library(shinyWidgets)
 library(tidyverse)
 library(DT)
 library(magrittr)
 library(reactable)
 
-source("staff_input.R")
+#source("staff_input.R")
+
+donation_wait_time <- tibble::tibble(
+  Machine.name  = c("WB1","WB2","WB3","Platelet1","Platelet2","PR1","PR2","PR3"),
+  Donation.type = c("WB","WB","WB","Platelet","Platelet","PR","PR","PR"),
+  Start.time    = as.POSIXct(NA),
+  Finish.time   = as.POSIXct(NA)
+)
 
 # Create UI
 
@@ -32,11 +40,13 @@ titlePanel("Blood donation wait time")),
                                                         "Power red 3"="PR3",
                                                         "None"="None"),selected="None"),
               fluidRow(div(style="margin:15px", 
-                           timeInput("start_time", "Start time", second=FALSE),
+                           shinyWidgets::timeInput("start_time", "Start time"
+                                    ),
                            actionButton(inputId = "submit",label = "Submit start time"))),        
                        
               mainPanel(
-                reactableOutput("wait_time")),
+                #reactableOutput("wait_time")
+                DTOutput("wait_time")), #1/17/2025
 
             actionButton(inputId = "reset",label = "Clear start and finish times")
               
@@ -44,32 +54,58 @@ titlePanel("Blood donation wait time")),
 
 
 server <- function(input, output) {
-  
+  started <- reactive({
+    req(started)
+    as.POSIXct(paste(Sys.Date(), input$start_time), tz = "")
+  })
   dwt <- reactiveVal(donation_wait_time)
   observeEvent(input$submit,
-               {dwt(dwt() %>% 
-                    mutate(Start.time=case_when(donation_wait_time$Machine.name==input$machine_name ~ strftime(input$start_time, "%r"), TRUE ~ Start.time)))
-                    donation_wait_time <<- dwt()
-                    write.csv(donation_wait_time,file="./arc_donation_time_tracker.csv",quote=FALSE,row.names=FALSE)})
-  observeEvent(input$submit,
-               {dwt(dwt() %>% 
-                    mutate(Finish.time=case_when(donation_wait_time$Donation.type=="Platelet" ~ strftime(strptime(donation_wait_time$Start.time, format="%r")+7200, format="%r"), TRUE ~ Finish.time))
-                    %>% mutate(Finish.time=case_when(donation_wait_time$Donation.type=="WB" ~ strftime(strptime(donation_wait_time$Start.time, format="%r")+1800, format="%r"), TRUE ~ Finish.time))
-                    %>% mutate(Finish.time=case_when(donation_wait_time$Donation.type=="PR" ~ strftime(strptime(donation_wait_time$Start.time, format="%r")+3600, format="%r"), TRUE ~ Finish.time)))
-                   donation_wait_time <<- dwt()
-                   write.csv(donation_wait_time,file="./arc_donation_time_tracker.csv",quote=FALSE,row.names=FALSE)}) 
+               {st <- started()
+                 dwt(dwt() %>% 
+                    mutate(Start.time=if_else(Machine.name==input$machine_name, started(), Start.time),
+                    Finish.time = case_when(
+                             Machine.name == input$machine_name & Donation.type == "Platelet" ~ st + 7200,
+                             Machine.name == input$machine_name & Donation.type == "WB"       ~ st + 1800,
+                             Machine.name == input$machine_name & Donation.type == "PR"       ~ st + 3600,
+                             TRUE ~ Finish.time)
+                    #Finish.time=case_when(Donation.type=="Platelet" ~ started()+7200, TRUE ~ Finish.time))
+                    #%>% mutate(Finish.time=case_when(Donation.type=="WB" ~ started()+1800, TRUE ~ Finish.time))
+                    #%>% mutate(Finish.time=case_when(Donation.type=="PR" ~ started()+3600, TRUE ~ Finish.time))
+                    #donation_wait_time <- dwt()
+                    #write.csv(donation_wait_time,file="./arc_donation_time_tracker.csv",quote=FALSE,row.names=FALSE)
+                 ))})
+  #observeEvent(input$submit,
+               #{dwt(dwt() %>% 
+                    #mutate(Finish.time=case_when(Donation.type=="Platelet" ~ strftime(strptime(Start.time, format="%r")+7200, format="%r"), TRUE ~ Finish.time))
+                    #%>% mutate(Finish.time=case_when(Donation.type=="WB" ~ strftime(strptime(Start.time, format="%r")+1800, format="%r"), TRUE ~ Finish.time))
+                    #%>% mutate(Finish.time=case_when(Donation.type=="PR" ~ strftime(strptime(Start.time, format="%r")+3600, format="%r"), TRUE ~ Finish.time)))
+                   #donation_wait_time <- dwt()
+                   #write.csv(donation_wait_time,file="./arc_donation_time_tracker.csv",quote=FALSE,row.names=FALSE)
+                 #}) 
   observeEvent(input$reset,
-               {dwt(dwt() %>% 
-                    mutate(Start.time="") %>%
-                    mutate(Finish.time=""))
-                    donation_wait_time <<- dwt()
-                    write.csv(donation_wait_time,file="./arc_donation_time_tracker.csv",quote=FALSE,row.names=FALSE)}) 
+                  {dwt(dwt() %>% 
+                    mutate(Start.time=as.POSIXct(NA)) %>%
+                    mutate(Finish.time=as.POSIXct(NA)))
+                    #donation_wait_time <- dwt()
+                    #write.csv(donation_wait_time,file="./arc_donation_time_tracker.csv",quote=FALSE,row.names=FALSE)
+                 }) 
   
-  output$wait_time <- renderReactable({
-    reactable(
-      dwt()
+  #output$wait_time <- renderReactable({
+    #reactable(
+      #dwt()
+  output$wait_time <- renderDT({
+    datatable(
+      dwt() %>%
+        mutate(
+          Start.time  = if_else(is.na(Start.time), "", format(Start.time, "%I:%M %p")),
+          Finish.time = if_else(is.na(Finish.time), "", format(Finish.time, "%I:%M %p"))
+        ),
+      rownames = FALSE
     )
   })
+    #)
+
+
   
 }
 
